@@ -1,0 +1,43 @@
+name: Build OpenWRT Package
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up OpenWRT SDK
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses5-dev gawk git subversion libssl-dev gettext zlib1g-dev file wget unzip python3
+        wget https://downloads.openwrt.org/releases/21.02.1/targets/x86/64/openwrt-sdk-21.02.1-x86-64_gcc-8.4.0_musl.Linux-x86_64.tar.xz
+        tar -xf openwrt-sdk-21.02.1-x86-64_gcc-8.4.0_musl.Linux-x86_64.tar.xz
+        mv openwrt-sdk-21.02.1-x86-64_gcc-8.4.0_musl.Linux-x86_64 openwrt-sdk
+
+    - name: Copy package files to SDK
+      run: |
+        mkdir -p openwrt-sdk/package/amneziawg
+        cp -r * openwrt-sdk/package/amneziawg
+
+    - name: Build package
+      run: |
+        cd openwrt-sdk
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+        make package/amneziawg/compile V=s
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: amneziawg-ipk
+        path: openwrt-sdk/bin/packages/x86_64/amneziawg/*.ipk
